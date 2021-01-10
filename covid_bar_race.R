@@ -1,6 +1,8 @@
 extrafont::loadfonts(device = "win")
 library(tidyverse)
 library(gganimate)
+library(hrbrthemes)
+library(av)
 
 setwd("C:/Users/331180/Documents/R/Other")
 
@@ -34,20 +36,86 @@ covid_age <- covid_age %>%
 
 levels(covid_age$age)
 
-# df1 <- covid_age %>% 
-#   group_by(age, date) %>% 
-#   arrange(date) %>% 
+df1 <- covid_age %>%
+  group_by(age, date) %>%
+  arrange(date) %>%
+  summarise(newCasesBySpecimenDate = sum(newCasesBySpecimenDate)) %>%
+  mutate(rol_sum = cumsum(newCasesBySpecimenDate)) %>%
+  group_by(date) %>%
+  arrange(-rol_sum) %>%
+  mutate(rank=row_number()) %>%
+  filter(rank<=5)
+
+levels(covid_age$age)
+
+
+t <- df1 %>%
+  ggplot(aes(x = -rank,y = rol_sum, group = age)) +
+  geom_tile(aes(y = rol_sum / 2, height = rol_sum, fill = age), width = 0.9) +
+  geom_text(aes(y = 0, label = paste(age, " ")), vjust = 0.2, hjust = 1, size = 6) +
+  geom_text(aes(label = scales::comma(rol_sum, accuracy = 1)), hjust = "left", nudge_y = 100000, colour = "grey30", size = 6) +
+  coord_flip(clip="off") +
+  #scale_fill_manual(name = 'age', values = c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#AA0B3C")) +
+  scale_x_discrete("") +
+  scale_y_continuous("",labels=scales::comma) +
+  hrbrthemes::theme_ipsum(plot_title_size = 20, 
+                          subtitle_size = 18, 
+                          caption_size = 16, 
+                          base_size = 20, 
+                          axis_text_size = 16) +
+  theme(panel.grid.major.y=element_blank(),
+        panel.grid.minor.x=element_blank(),
+        legend.position = "bottom",
+        plot.margin = margin(2,1,2,4,"cm"),
+        axis.text.y=element_blank(),
+        axis.text = element_text(size = 16)) +
+  # gganimate code to transition by year:
+  transition_time(date) +
+  ease_aes('cubic-in-out') +
+  labs(title='The Changing Face of Covid-19 in the UK: Number of Cases by {round(frame_time,0)}',
+       subtitle='Top 5 Age Groups Nation-wide',
+       caption='Calculated as a daily rolling sum of total cases to date.
+       N.B. Mass testing begins in May 2020.
+       Data from: https://coronavirus.data.gov.uk/details/download') +
+  guides(fill=guide_legend(title="Age Group"))
+
+#t
+
+animate(t,
+        nframes = 1000,
+        fps = 25,
+        start_pause = 50,
+        end_pause = 50,
+        width = 1200,
+        height = 900,
+        renderer = gifski_renderer("gganim_total_covid.gif"))
+
+
+b <- animate(t,
+        nframes = 1000,
+        fps = 25,
+        start_pause = 50,
+        end_pause = 50,
+        width = 1200,
+        height = 900,
+        renderer = av_renderer())
+
+anim_save("covid_age_race.mp4", b)
+
+# df3 <- covid_age %>%
+#   group_by(age, date) %>%
+#   arrange(date) %>%
 #   summarise(newCasesBySpecimenDate = sum(newCasesBySpecimenDate)) %>%
 #   mutate(rol_sum = cumsum(newCasesBySpecimenDate)) %>%
 #   group_by(date) %>%
 #   arrange(-rol_sum) %>%
 #   mutate(rank=row_number()) %>%
-#   filter(rank<=5)
+#   filter(rank<=10)
 # 
-# levels(covid_age$age)
+# levels(df3$age)
 # 
 # 
-# t <- df1 %>%
+# f <- df3 %>%
 #   ggplot(aes(x = -rank,y = rol_sum, group = age)) +
 #   geom_tile(aes(y = rol_sum / 2, height = rol_sum, fill = age), width = 0.9) +
 #   geom_text(aes(y = 0, label = paste(age, " ")), vjust = 0.2, hjust = 1) +
@@ -68,67 +136,67 @@ levels(covid_age$age)
 #   labs(title='Covid-19 UK: Number of Cases by {round(frame_time,0)}',
 #        subtitle='Top 5 Age Groups Nation-wide',
 #        caption='Calculated as a daily rolling sum of total cases to date.
+#        N.B. Mass testing begins in May 2020.
 #        Data from: https://coronavirus.data.gov.uk/details/download') +
 #   guides(fill=guide_legend(title="Age Group"))
 # 
-# t
+# f
 # 
-# animate(t, 
+# animate(f,
+#         nframes = 1000,
+#         fps = 25,
+#         start_pause = 50,
+#         end_pause = 50,
+#         width = 1200,
+#         height = 900,
+#         renderer = gifski_renderer("gganim_total_10__covid.gif"))
+
+
+# df2 <- covid_age %>% 
+#   group_by(age, date) %>% 
+#   arrange(date) %>% 
+#   summarise(newCasesBySpecimenDate = sum(newCasesBySpecimenDate)) %>%
+#   group_by(date) %>%
+#   arrange(-newCasesBySpecimenDate) %>%
+#   mutate(rank=row_number()) %>%
+#   group_by(age) %>%
+#   filter(rank<=5)
+# 
+# 
+# p <- df2 %>%
+#   ggplot(aes(x = -rank,y = newCasesBySpecimenDate, group = age)) +
+#   geom_tile(aes(y = newCasesBySpecimenDate / 2, height = newCasesBySpecimenDate, fill = age), width = 0.9) +
+#   geom_text(aes(y = 0, label = paste(age, " ")), vjust = 0.2, hjust = 1) +
+#   geom_text(aes(label = scales::comma(newCasesBySpecimenDate)), hjust = "left", nudge_y = 100000, colour = "grey30") +
+#   coord_flip(clip="off") +
+#   #scale_fill_manual(name = 'age', values = c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#AA0B3C")) +
+#   scale_x_discrete("") +
+#   scale_y_continuous("",labels=scales::comma) +
+#   hrbrthemes::theme_ipsum(plot_title_size = 20, subtitle_size = 14, caption_size = 12, base_size = 10) +
+#   theme(panel.grid.major.y=element_blank(),
+#         panel.grid.minor.x=element_blank(),
+#         legend.position = "bottom",
+#         plot.margin = margin(2,1,2,4,"cm"),
+#         axis.text.y=element_blank()) +
+#   # gganimate code to transition by year:
+#   transition_time(date) +
+#   ease_aes('cubic-in-out') +
+#   labs(title='Covid-19 UK: Daily Number of Cases on {round(frame_time,0)}',
+#        subtitle='Top 5 age groups on a given day',
+#        caption='Calculated as a nation-wide daily sum of cases, grouped by age group.
+#        Data from: https://coronavirus.data.gov.uk/details/download') +
+#   guides(fill=guide_legend(title="Age Group"))
+# 
+# 
+# #p
+# 
+# 
+# animate(p, 
 #         nframes = 1000, 
 #         fps = 25, 
+#         duration = 85,
 #         start_pause = 50,
 #         end_pause = 50, 
 #         width = 1200, 
 #         height = 900,
-#         renderer = gifski_renderer("gganim_total_covid.gif"))
-
-
-
-
-df2 <- covid_age %>% 
-  group_by(age, date) %>% 
-  arrange(date) %>% 
-  summarise(newCasesBySpecimenDate = sum(newCasesBySpecimenDate)) %>%
-  group_by(date) %>%
-  arrange(-newCasesBySpecimenDate) %>%
-  mutate(rank=row_number()) %>%
-  group_by(age) %>%
-  filter(rank<=5)
-
-
-p <- df2 %>%
-  ggplot(aes(x = -rank,y = newCasesBySpecimenDate, group = age)) +
-  geom_tile(aes(y = newCasesBySpecimenDate / 2, height = newCasesBySpecimenDate, fill = age), width = 0.9) +
-  geom_text(aes(y = 0, label = paste(age, " ")), vjust = 0.2, hjust = 1) +
-  geom_text(aes(label = scales::comma(newCasesBySpecimenDate)), hjust = "left", nudge_y = 100000, colour = "grey30") +
-  coord_flip(clip="off") +
-  #scale_fill_manual(name = 'age', values = c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#AA0B3C")) +
-  scale_x_discrete("") +
-  scale_y_continuous("",labels=scales::comma) +
-  hrbrthemes::theme_ipsum(plot_title_size = 20, subtitle_size = 14, caption_size = 12, base_size = 10) +
-  theme(panel.grid.major.y=element_blank(),
-        panel.grid.minor.x=element_blank(),
-        legend.position = "bottom",
-        plot.margin = margin(2,1,2,4,"cm"),
-        axis.text.y=element_blank()) +
-  # gganimate code to transition by year:
-  transition_time(date) +
-  ease_aes('cubic-in-out') +
-  labs(title='Covid-19 UK: Daily Number of Cases on {round(frame_time,0)}',
-       subtitle='Top 5 age groups on a given day',
-       caption='Calculated as a nation-wide daily sum of cases, grouped by age group.
-       Data from: https://coronavirus.data.gov.uk/details/download') +
-  guides(fill=guide_legend(title="Age Group"))
-
-
-#p
-
-
-animate(p, 
-        nframes = 1000, 
-        fps = 25, 
-        start_pause = 50,
-        end_pause = 50, 
-        width = 1200, 
-        height = 900,
-        renderer = gifski_renderer("gganim_daily_covid.gif"))
+#         renderer = gifski_renderer("gganim_daily_covid.gif"))
